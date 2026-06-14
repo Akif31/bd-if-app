@@ -1,4 +1,125 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Theme tokens. The C palette in App.tsx maps 1:1 onto these. Flip the whole app
+   by setting data-theme="dark" on <html>. Keep names in sync with C.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  color-scheme: light;
+
+  --c-paper: #FBFBF8;
+  --c-surface: #FFFFFF;
+  --c-card: #F4F3EE;
+  --c-ink: #1F1E1B;
+  --c-ink2: #55534C;
+  --c-faint: #8A877E;
+  --c-line: #E7E5DF;
+
+  --c-on-accent: #FFFFFF;
+  --c-knob: #FFFFFF;
+
+  --c-green: #1E5B3F;
+  --c-green-soft: #E3EEE7;
+  --c-green-border: #C8DCCF;
+
+  --c-plum: #7C3A5E;
+  --c-plum-soft: #F2E6ED;
+
+  --c-turmeric: #C8920B;
+  --c-turmeric-soft: #F7EED7;
+  --c-turmeric-border: #E8D9AE;
+  --c-carb-fg: #7A5A06;
+
+  --c-clay: #B0492F;
+  --c-clay-soft: #F6E5DF;
+  --c-clay-border: #E8C8BC;
+
+  --c-sky: #2B6777;
+  --c-sky-soft: #E2EDF0;
+  --c-sky-border: #C5D9DE;
+
+  --c-lime: #5A7A2E;
+  --c-lime-soft: #EDF2E2;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --c-paper: #161512;
+  --c-surface: #211F1B;
+  --c-card: #1D1B18;
+  --c-ink: #ECEAE3;
+  --c-ink2: #C2BEB4;
+  --c-faint: #9A968B;
+  --c-line: #322F29;
+
+  /* accents go light on dark, so text *on* accent flips to ink for contrast */
+  --c-on-accent: #17160F;
+  --c-knob: #F5F3EC;
+
+  --c-green: #5FB78A;
+  --c-green-soft: #18271F;
+  --c-green-border: #2C4636;
+
+  --c-plum: #DB8FB4;
+  --c-plum-soft: #281A21;
+
+  --c-turmeric: #E3B24A;
+  --c-turmeric-soft: #2A2410;
+  --c-turmeric-border: #463E1C;
+  --c-carb-fg: #E3B24A;
+
+  --c-clay: #E68A6B;
+  --c-clay-soft: #2A1A13;
+  --c-clay-border: #4A2C22;
+
+  --c-sky: #66ABC0;
+  --c-sky-soft: #13262C;
+  --c-sky-border: #244A53;
+
+  --c-lime: #A1C463;
+  --c-lime-soft: #1F271A;
+}
+
 html, body, #root { min-height: 100%; }
+
+body {
+  background: var(--c-paper);
+  color: var(--c-ink);
+  font-family: "Inter Variable", Inter, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Press feedback — pressables should feel like they're listening (Emil). The
+   scale is a transform (GPU, no layout) so it stays cheap everywhere. */
+button {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+button:active { transform: scale(0.97); }
+.nav-item:active { transform: scale(0.92); }
+
+/* One-shot color crossfade applied to <html> only while a theme toggle is in
+   flight (added in JS, removed after ~220ms). Color transitions are kept under
+   reduced-motion because they aid comprehension; motion/transform is not. */
+.theme-transition,
+.theme-transition * {
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease, fill 200ms ease, stroke 200ms ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* keep the gentle theme color crossfade — it doesn't move anything */
+  .theme-transition,
+  .theme-transition * {
+    transition-duration: 200ms !important;
+  }
+}

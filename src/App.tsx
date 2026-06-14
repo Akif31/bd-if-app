@@ -12,27 +12,60 @@ import { useState, useEffect, useMemo, useRef } from "react";
 type Person = "m" | "f";
 type Tab = "plan" | "week" | "track" | "tips" | "move" | "setup";
 
+// Palette is theme-driven: every value resolves to a CSS variable defined in
+// index.css under :root (light) and :root[data-theme="dark"]. Toggling the
+// data-theme attribute on <html> re-themes the whole app with no React churn.
 const C = {
-  paper: "#FBFBF8",
-  ink: "#1F1E1B",
-  faint: "#8A877E",
-  line: "#E7E5DF",
-  card: "#F4F3EE",
-  green: "#1E5B3F",
-  greenSoft: "#E3EEE7",
-  plum: "#7C3A5E",
-  plumSoft: "#F2E6ED",
-  turmeric: "#C8920B",
-  turmericSoft: "#F7EED7",
-  clay: "#B0492F",
-  claySoft: "#F6E5DF",
-  sky: "#2B6777",
-  skySoft: "#E2EDF0",
-  lime: "#5A7A2E",
-  limeSoft: "#EDF2E2",
+  paper: "var(--c-paper)",
+  ink: "var(--c-ink)",
+  faint: "var(--c-faint)",
+  line: "var(--c-line)",
+  card: "var(--c-card)",
+  green: "var(--c-green)",
+  greenSoft: "var(--c-green-soft)",
+  plum: "var(--c-plum)",
+  plumSoft: "var(--c-plum-soft)",
+  turmeric: "var(--c-turmeric)",
+  turmericSoft: "var(--c-turmeric-soft)",
+  clay: "var(--c-clay)",
+  claySoft: "var(--c-clay-soft)",
+  sky: "var(--c-sky)",
+  skySoft: "var(--c-sky-soft)",
+  lime: "var(--c-lime)",
+  limeSoft: "var(--c-lime-soft)",
+  // surfaces + previously-inline literals, now themeable
+  surface: "var(--c-surface)",       // was "#fff" card backgrounds
+  onAccent: "var(--c-on-accent)",    // text/icon on accent buttons (light→white, dark→ink, always legible)
+  knob: "var(--c-knob)",             // toggle thumb — stays light in both themes
+  ink2: "var(--c-ink2)",             // was "#55534C" default chip text
+  carbFg: "var(--c-carb-fg)",        // was "#7A5A06"
+  greenBorder: "var(--c-green-border)",
+  skyBorder: "var(--c-sky-border)",
+  turmericBorder: "var(--c-turmeric-border)",
+  clayBorder: "var(--c-clay-border)",
 };
 
-const serif = '"Instrument Serif", Georgia, "Times New Roman", serif';
+const serif = '"Fraunces Variable", Fraunces, Georgia, "Times New Roman", serif';
+
+// Theme — drives the data-theme attribute the CSS variables key off of.
+type Theme = "light" | "dark";
+const THEME_META: Record<Theme, string> = { light: "#1E5B3F", dark: "#161512" };
+
+function applyTheme(next: Theme, animate: boolean) {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  if (animate) {
+    root.classList.add("theme-transition");
+    window.setTimeout(() => root.classList.remove("theme-transition"), 220);
+  }
+  root.setAttribute("data-theme", next);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", THEME_META[next]);
+}
+
+function prefersDark(): boolean {
+  try { return !!window.matchMedia?.("(prefers-color-scheme: dark)").matches; } catch { return false; }
+}
 
 // ── Identity (fixed) vs body config (editable) ───────────────────────────────
 
@@ -639,10 +672,10 @@ const EXERCISE_PLANS: Record<Person, ExPlan> = {
 
 const chipStyle: Record<string, { bg: string; fg: string }> = {
   protein: { bg: C.greenSoft, fg: C.green },
-  carb: { bg: C.turmericSoft, fg: "#7A5A06" },
+  carb: { bg: C.turmericSoft, fg: C.carbFg },
   veg: { bg: C.limeSoft, fg: C.lime },
   warn: { bg: C.claySoft, fg: C.clay },
-  default: { bg: C.card, fg: "#55534C" },
+  default: { bg: C.card, fg: C.ink2 },
 };
 
 function ChipEl({ chip }: { chip: Chip }) {
@@ -658,10 +691,10 @@ function ChipEl({ chip }: { chip: Chip }) {
 }
 
 const tipStyle: Record<Tip["kind"], { bg: string; fg: string; border: string }> = {
-  success: { bg: C.greenSoft, fg: C.green, border: "#C8DCCF" },
-  info: { bg: C.skySoft, fg: C.sky, border: "#C5D9DE" },
-  warn: { bg: C.turmericSoft, fg: "#7A5A06", border: "#E8D9AE" },
-  danger: { bg: C.claySoft, fg: C.clay, border: "#E8C8BC" },
+  success: { bg: C.greenSoft, fg: C.green, border: C.greenBorder },
+  info: { bg: C.skySoft, fg: C.sky, border: C.skyBorder },
+  warn: { bg: C.turmericSoft, fg: C.carbFg, border: C.turmericBorder },
+  danger: { bg: C.claySoft, fg: C.clay, border: C.clayBorder },
 };
 
 function TipCard({ tip }: { tip: Tip }) {
@@ -681,7 +714,7 @@ function MealCard({ meal, profile }: { meal: Meal; profile: DerivedProfile }) {
   const kcal = meal.id === "b" ? p.mealKcal.b : meal.id === "main" ? p.mealKcal.main : p.mealKcal.eve;
 
   return (
-    <div className="rounded-xl overflow-hidden mb-2.5" style={{ border: `1px solid ${C.line}`, background: "#fff" }}>
+    <div className="rounded-xl overflow-hidden mb-2.5" style={{ border: `1px solid ${C.line}`, background: C.surface }}>
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-4 py-3 text-left"
@@ -791,7 +824,7 @@ function ProteinCounter({ profile }: { profile: DerivedProfile }) {
   const pctFloor = Math.min(100, Math.round((total / p.proteinFloor) * 100));
 
   return (
-    <div className="rounded-xl px-4 py-3 mb-5" style={{ background: "#fff", border: `1px solid ${C.line}` }}>
+    <div className="rounded-xl px-4 py-3 mb-5" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
       <div className="flex items-baseline justify-between mb-2">
         <p className="text-sm font-medium" style={{ color: C.ink }}>Today's protein</p>
         <p className="text-sm" style={{ color: total >= p.proteinFloor ? C.green : C.clay, fontVariantNumeric: "tabular-nums" }}>
@@ -944,7 +977,7 @@ function WeekTab({ profile }: { profile: DerivedProfile }) {
           const t = dayTotals(d);
           const editing = editDay === d.day;
           return (
-            <div key={d.day} className="rounded-xl" style={{ background: editing ? "#fff" : C.card, border: `1px solid ${editing ? p.accent : C.line}` }}>
+            <div key={d.day} className="rounded-xl" style={{ background: editing ? C.surface : C.card, border: `1px solid ${editing ? p.accent : C.line}` }}>
               <button
                 onClick={() => { setEditDay(editing ? null : d.day); setPick(""); }}
                 className="w-full flex items-center gap-3 px-3 py-2 text-left"
@@ -972,7 +1005,7 @@ function WeekTab({ profile }: { profile: DerivedProfile }) {
                       value={pick}
                       onChange={(e) => setPick(e.target.value)}
                       className="flex-1 text-xs px-2 py-2 rounded-xl"
-                      style={{ border: `1px solid ${C.line}`, background: "#fff", color: C.ink }}
+                      style={{ border: `1px solid ${C.line}`, background: C.surface, color: C.ink }}
                     >
                       <option value="">Add food…</option>
                       {CAT_ORDER.map((cat) => {
@@ -990,7 +1023,7 @@ function WeekTab({ profile }: { profile: DerivedProfile }) {
                     <button
                       onClick={() => addToDay(d.day, pick)}
                       className="px-4 py-2 rounded-xl text-xs font-medium"
-                      style={{ background: p.accent, color: "#fff" }}
+                      style={{ background: p.accent, color: C.onAccent }}
                     >
                       Add
                     </button>
@@ -1009,14 +1042,14 @@ function WeekTab({ profile }: { profile: DerivedProfile }) {
       <button
         onClick={() => setShowKB(!showKB)}
         className="w-full flex items-center justify-between px-4 py-3 rounded-xl mb-2"
-        style={{ background: "#fff", border: `1px solid ${C.line}` }}
+        style={{ background: C.surface, border: `1px solid ${C.line}` }}
       >
         <span className="text-sm font-medium" style={{ color: C.ink }}>Food knowledge base · {allFoods.length} items</span>
         <span className="text-xs" style={{ color: C.faint, transform: showKB ? "rotate(180deg)" : "none" }}>▼</span>
       </button>
 
       {showKB && (
-        <div className="rounded-xl px-4 py-3" style={{ background: "#fff", border: `1px solid ${C.line}` }}>
+        <div className="rounded-xl px-4 py-3" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
           {/* Add custom food */}
           <p className="text-xs font-medium uppercase tracking-wide mb-2" style={{ color: C.faint }}>Add a food</p>
           <div className="grid grid-cols-2 gap-2 mb-2">
@@ -1031,10 +1064,10 @@ function WeekTab({ profile }: { profile: DerivedProfile }) {
           </div>
           <div className="flex gap-2 mb-4">
             <select value={nf.cat} onChange={(e) => setNf({ ...nf, cat: e.target.value as FoodCat })}
-              className="flex-1 text-xs px-2 py-2 rounded-xl" style={{ border: `1px solid ${C.line}`, background: "#fff", color: C.ink }}>
+              className="flex-1 text-xs px-2 py-2 rounded-xl" style={{ border: `1px solid ${C.line}`, background: C.surface, color: C.ink }}>
               {CAT_ORDER.map((c2) => <option key={c2} value={c2}>{CAT_LABEL[c2]}</option>)}
             </select>
-            <button onClick={addCustomFood} className="px-4 py-2 rounded-xl text-xs font-medium" style={{ background: p.accent, color: "#fff" }}>
+            <button onClick={addCustomFood} className="px-4 py-2 rounded-xl text-xs font-medium" style={{ background: p.accent, color: C.onAccent }}>
               Save food
             </button>
           </div>
@@ -1137,7 +1170,7 @@ function TrackTab({ person, profile }: { person: Person; profile: DerivedProfile
 
   return (
     <div>
-      <div className="rounded-xl px-4 py-3 mb-4" style={{ background: C.skySoft, border: "1px solid #C5D9DE" }}>
+      <div className="rounded-xl px-4 py-3 mb-4" style={{ background: C.skySoft, border: `1px solid ${C.skyBorder}` }}>
         <p className="text-xs leading-relaxed" style={{ color: C.sky }}>
           <span className="font-semibold">This curve is honest, not linear.</span> Weeks 1–2 drop fast (water and glycogen, not fat).
           After that the body's burn rate shrinks as weight falls, so the curve flattens.
@@ -1174,12 +1207,12 @@ function TrackTab({ person, profile }: { person: Person; profile: DerivedProfile
           onChange={(e) => setInput(e.target.value)}
           placeholder="Weekly average weight (kg)"
           className="flex-1 text-sm px-3 py-2 rounded-xl outline-none"
-          style={{ border: `1px solid ${C.line}`, background: "#fff", color: C.ink }}
+          style={{ border: `1px solid ${C.line}`, background: C.surface, color: C.ink }}
         />
         <button
           onClick={addEntry}
           className="px-4 py-2 rounded-xl text-sm font-medium"
-          style={{ background: p.accent, color: "#fff" }}
+          style={{ background: p.accent, color: C.onAccent }}
         >
           Log weight
         </button>
@@ -1301,7 +1334,7 @@ function BackupPanel({ profile }: { profile: DerivedProfile }) {
   const stale = !last || Date.now() - new Date(last).getTime() > 7 * 86400000;
 
   return (
-    <div className="rounded-xl px-4 py-3 mb-3" style={{ background: "#fff", border: `1px solid ${C.line}` }}>
+    <div className="rounded-xl px-4 py-3 mb-3" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
       <p className="text-sm font-medium mb-1" style={{ color: C.ink }}>Backup &amp; restore</p>
       <p className="text-xs leading-relaxed mb-3" style={{ color: C.faint }}>
         All data lives only on this phone. Export a file before clearing browser data, switching phones, or reinstalling
@@ -1316,7 +1349,7 @@ function BackupPanel({ profile }: { profile: DerivedProfile }) {
       )}
 
       <div className="flex gap-2 mb-3">
-        <button onClick={doExport} className="flex-1 px-4 py-2 rounded-xl text-sm font-medium" style={{ background: p.accent, color: "#fff" }}>
+        <button onClick={doExport} className="flex-1 px-4 py-2 rounded-xl text-sm font-medium" style={{ background: p.accent, color: C.onAccent }}>
           Export backup
         </button>
         <button onClick={() => fileRef.current?.click()} className="flex-1 px-4 py-2 rounded-xl text-sm font-medium" style={{ background: p.accentSoft, color: p.accent }}>
@@ -1333,7 +1366,7 @@ function BackupPanel({ profile }: { profile: DerivedProfile }) {
           className="shrink-0 rounded-full transition-colors"
           style={{ width: 36, height: 20, background: auto ? p.accent : C.line, position: "relative" }}
         >
-          <span style={{ position: "absolute", top: 2, left: auto ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
+          <span style={{ position: "absolute", top: 2, left: auto ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: C.knob, transition: "left .15s" }} />
         </span>
         <span className="text-xs" style={{ color: C.ink }}>
           Auto-export on open <span style={{ color: C.faint }}>· makes a backup when you open the app and it's been a day</span>
@@ -1352,11 +1385,65 @@ function BackupPanel({ profile }: { profile: DerivedProfile }) {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
+// ── Bottom navigation (replaces the old top tab strip) ───────────────────────
+
+function TabIcon({ id, size = 22 }: { id: Tab; size?: number }) {
+  const s = {
+    width: size, height: size, viewBox: "0 0 24 24", fill: "none",
+    stroke: "currentColor", strokeWidth: 1.8,
+    strokeLinecap: "round" as const, strokeLinejoin: "round" as const,
+  };
+  switch (id) {
+    case "plan":  return (<svg {...s}><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 3h6v3H9z" /><path d="m9 13 2.5 2.5L16 11" /></svg>);
+    case "week":  return (<svg {...s}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>);
+    case "track": return (<svg {...s}><path d="M4 5v15h16" /><path d="m8 14 3-3 3 2 4-6" /></svg>);
+    case "tips":  return (<svg {...s}><path d="M9 18h6M10 21h4" /><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5.9 1 1 1.6l.1.5h4.8l.1-.5c.1-.6.4-1.1 1-1.6A6 6 0 0 0 12 3Z" /></svg>);
+    case "move":  return (<svg {...s}><path d="M3 12h4l2-6 4 12 2-6h6" /></svg>);
+    case "setup": return (<svg {...s}><line x1="4" y1="8" x2="20" y2="8" /><line x1="4" y1="16" x2="20" y2="16" /><circle cx="10" cy="8" r="2.2" /><circle cx="15" cy="16" r="2.2" /></svg>);
+  }
+}
+
+function BottomNav({ tabs, tab, setTab, accent }: {
+  tabs: { id: Tab; label: string }[]; tab: Tab; setTab: (t: Tab) => void; accent: string;
+}) {
+  return (
+    <nav
+      style={{
+        position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40,
+        background: C.surface, borderTop: `1px solid ${C.line}`,
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
+      <div className="max-w-2xl mx-auto flex">
+        {tabs.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              aria-label={t.label}
+              aria-current={active ? "page" : undefined}
+              className="nav-item flex-1 flex flex-col items-center justify-center gap-1 py-2"
+              style={{ color: active ? accent : C.faint, minHeight: 54 }}
+            >
+              <TabIcon id={t.id} />
+              <span className="text-[10px] font-medium" style={{ letterSpacing: "0.01em" }}>{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
 export default function DietPlan() {
   const [person, setPerson] = useState<Person>("m");
   const [tab, setTab] = useState<Tab>("plan");
   const [bodies, setBodies] = useState<Record<Person, Body>>(DEFAULT_BODY);
   const [cfgLoaded, setCfgLoaded] = useState(false);
+  const [theme, setTheme] = useState<Theme>(
+    () => (typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light")
+  );
 
   useEffect(() => {
     // Ask the browser not to evict our data under storage pressure (best-effort).
@@ -1390,6 +1477,25 @@ export default function DietPlan() {
     });
     return () => { alive = false; };
   }, []);
+
+  // Theme: use the saved choice, else follow the OS. Apply to <html> on load.
+  useEffect(() => {
+    let alive = true;
+    storeGet("theme").then((saved) => {
+      if (!alive) return;
+      const resolved: Theme = saved === "dark" || saved === "light" ? saved : (prefersDark() ? "dark" : "light");
+      setTheme(resolved);
+      applyTheme(resolved, false);
+    });
+    return () => { alive = false; };
+  }, []);
+
+  const toggleTheme = () => {
+    const next: Theme = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    applyTheme(next, true);
+    storeSet("theme", next);
+  };
 
   const saveBody = async (per: Person, body: Body) => {
     const next = { ...bodies, [per]: body };
@@ -1427,14 +1533,29 @@ export default function DietPlan() {
 
   return (
     <div style={{ background: C.paper, minHeight: "100vh" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap');`}</style>
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        <h1 className="text-3xl mb-1" style={{ fontFamily: serif, color: C.ink }}>
-          BD Intermittent Fasting Plan
-        </h1>
-        <p className="text-sm mb-5" style={{ color: C.faint }}>
-          For two people, Bangladesh summer · counted, not estimated
-        </p>
+      <div className="max-w-2xl mx-auto px-4 pt-6" style={{ paddingBottom: "calc(84px + env(safe-area-inset-bottom))" }}>
+        <div className="flex items-start justify-between gap-3 mb-5">
+          <div className="min-w-0">
+            <h1 className="text-4xl leading-tight mb-1" style={{ fontFamily: serif, fontWeight: 600, letterSpacing: "-0.02em", color: C.ink }}>
+              BD Intermittent Fasting Plan
+            </h1>
+            <p className="text-sm" style={{ color: C.faint }}>
+              For two people, Bangladesh summer · counted, not estimated
+            </p>
+          </div>
+          <button
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="shrink-0 grid place-items-center rounded-xl"
+            style={{ width: 40, height: 40, background: C.surface, border: `1px solid ${C.line}`, color: C.ink }}
+          >
+            {theme === "dark" ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            )}
+          </button>
+        </div>
 
         {/* Person toggle */}
         <div className="grid grid-cols-2 gap-2 mb-5">
@@ -1447,7 +1568,7 @@ export default function DietPlan() {
                 onClick={() => setPerson(per)}
                 className="rounded-xl px-4 py-3 text-left transition-colors"
                 style={{
-                  background: active ? pp.accentSoft : "#fff",
+                  background: active ? pp.accentSoft : C.surface,
                   border: `1px solid ${active ? pp.accent : C.line}`,
                 }}
               >
@@ -1473,23 +1594,7 @@ export default function DietPlan() {
 
         <DayStrip profile={p} />
 
-        {/* Tabs */}
-        <div className="flex gap-0 mb-5" style={{ borderBottom: `1px solid ${C.line}` }}>
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className="px-4 py-2 text-sm -mb-px"
-              style={{
-                color: tab === t.id ? p.accent : C.faint,
-                borderBottom: `2px solid ${tab === t.id ? p.accent : "transparent"}`,
-                fontWeight: tab === t.id ? 600 : 400,
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        {/* Section content — navigation lives in the fixed BottomNav below */}
 
         {/* ── Plan ── */}
         {tab === "plan" && (
@@ -1499,7 +1604,7 @@ export default function DietPlan() {
             {MEALS.map((m) => <MealCard key={m.id} meal={m} profile={p} />)}
 
             {/* Calorie ledger — the reconciliation v1 was missing */}
-            <div className="rounded-xl px-4 py-3 mt-4 mb-4" style={{ background: "#fff", border: `1px solid ${C.line}` }}>
+            <div className="rounded-xl px-4 py-3 mt-4 mb-4" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
               <p className="text-sm font-medium mb-2" style={{ color: C.ink }}>Where the {p.intake.toLocaleString()} kcal goes</p>
               {p.ledger.map((l) => (
                 <div key={l.item} className="flex justify-between text-xs py-1" style={{ color: C.faint }}>
@@ -1521,12 +1626,12 @@ export default function DietPlan() {
               {["watermelon", "papaya", "guava", "jamrul", "pineapple", "banana"].map((f) => (
                 <span key={f} className="text-xs px-2.5 py-1 rounded-lg" style={{ background: C.plumSoft, color: C.plum }}>{f}</span>
               ))}
-              <span className="text-xs px-2.5 py-1 rounded-lg" style={{ background: C.turmericSoft, color: "#7A5A06" }}>
+              <span className="text-xs px-2.5 py-1 rounded-lg" style={{ background: C.turmericSoft, color: C.carbFg }}>
                 mango — max 1 medium/day, pair with protein
               </span>
             </div>
 
-            <div className="rounded-xl px-4 py-3 text-xs" style={{ background: C.greenSoft, border: "1px solid #C8DCCF", color: C.green }}>
+            <div className="rounded-xl px-4 py-3 text-xs" style={{ background: C.greenSoft, border: `1px solid ${C.greenBorder}`, color: C.green }}>
               <span className="font-semibold">Treat rule: </span>
               once a week — biryani, fuchka, burger, ice cream — reduced portion. Twice a week during active fat loss
               wipes out the deficit.
@@ -1552,7 +1657,7 @@ export default function DietPlan() {
           const ex = EXERCISE_PLANS[person];
           return (
             <div>
-              <div className="rounded-xl px-4 py-3 text-xs mb-3" style={{ background: C.skySoft, border: "1px solid #C5D9DE", color: C.sky }}>
+              <div className="rounded-xl px-4 py-3 text-xs mb-3" style={{ background: C.skySoft, border: `1px solid ${C.skyBorder}`, color: C.sky }}>
                 <span className="font-semibold">Honest note: </span>
                 the movements are the same for both of you — what differs is loading, progression speed, and recovery
                 rules in a deficit. These sessions protect muscle; the daily walk does the fat-loss work.
@@ -1569,7 +1674,7 @@ export default function DietPlan() {
                   <p className="text-xs font-medium uppercase tracking-wide mb-2" style={{ color: C.faint }}>{s.title}</p>
                   <div className="space-y-2">
                     {s.items.map((it, i) => (
-                      <div key={it.name} className="flex items-start gap-3 p-3 rounded-xl" style={{ background: "#fff", border: `1px solid ${C.line}` }}>
+                      <div key={it.name} className="flex items-start gap-3 p-3 rounded-xl" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
                         <div className="w-7 h-7 rounded-full text-xs font-semibold flex items-center justify-center shrink-0" style={{ background: p.accentSoft, color: p.accent }}>
                           {i + 1}
                         </div>
@@ -1598,7 +1703,7 @@ export default function DietPlan() {
                 ))}
               </div>
 
-              <div className="rounded-xl px-4 py-3 text-xs" style={{ background: C.turmericSoft, border: "1px solid #E8D9AE", color: "#7A5A06" }}>
+              <div className="rounded-xl px-4 py-3 text-xs" style={{ background: C.turmericSoft, border: `1px solid ${C.turmericBorder}`, color: C.carbFg }}>
                 <span className="font-semibold">Deficit rule: </span>{ex.deficitNote}
               </div>
             </div>
@@ -1622,7 +1727,7 @@ export default function DietPlan() {
                   saveBody(person, { ...b, [key]: v });
                 }}
                 className="w-full text-sm px-3 py-2 rounded-xl outline-none"
-                style={{ border: `1px solid ${C.line}`, background: "#fff", color: C.ink }}
+                style={{ border: `1px solid ${C.line}`, background: C.surface, color: C.ink }}
               />
             </div>
           );
@@ -1649,7 +1754,7 @@ export default function DietPlan() {
                 value={b.activity}
                 onChange={(e) => saveBody(person, { ...b, activity: e.target.value as Activity })}
                 className="w-full text-sm px-3 py-2 rounded-xl mb-3"
-                style={{ border: `1px solid ${C.line}`, background: "#fff", color: C.ink }}
+                style={{ border: `1px solid ${C.line}`, background: C.surface, color: C.ink }}
               >
                 {(Object.keys(ACTIVITY) as Activity[]).map((a) => (
                   <option key={a} value={a}>{ACTIVITY[a].label}</option>
@@ -1667,7 +1772,7 @@ export default function DietPlan() {
 
               {/* Live computed result */}
               <div className="rounded-xl overflow-hidden mb-3" style={{ border: `1px solid ${C.line}` }}>
-                <div className="px-4 py-3" style={{ background: "#fff" }}>
+                <div className="px-4 py-3" style={{ background: C.surface }}>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     {[
                       { k: "BMR", v: p.bmr.toLocaleString(), s: "at rest" },
@@ -1690,7 +1795,7 @@ export default function DietPlan() {
 
               {/* Safety messaging */}
               {p.rateClamped && (
-                <div className="rounded-xl px-4 py-3 mb-2 text-xs leading-relaxed" style={{ background: C.claySoft, border: "1px solid #E8C8BC", color: C.clay }}>
+                <div className="rounded-xl px-4 py-3 mb-2 text-xs leading-relaxed" style={{ background: C.claySoft, border: `1px solid ${C.clayBorder}`, color: C.clay }}>
                   <span className="font-semibold">Timeline slowed for safety.</span> {b.weeks} weeks would need
                   ~{p.reqRate.toFixed(2)} kg/week — above the safe ceiling of ~1% bodyweight. The app set the fastest
                   safe pace instead (~{p.actualRate.toFixed(2)} kg/week). Going faster means losing muscle and rebounding,
@@ -1698,14 +1803,14 @@ export default function DietPlan() {
                 </div>
               )}
               {p.atFloor && (
-                <div className="rounded-xl px-4 py-3 mb-2 text-xs leading-relaxed" style={{ background: C.claySoft, border: "1px solid #E8C8BC", color: C.clay }}>
+                <div className="rounded-xl px-4 py-3 mb-2 text-xs leading-relaxed" style={{ background: C.claySoft, border: `1px solid ${C.clayBorder}`, color: C.clay }}>
                   <span className="font-semibold">Held at the calorie floor.</span> The math wanted to go lower, but
                   {person === "f" ? " 1,300" : " 1,500"} kcal / your BMR is the floor for unsupervised dieting. Eating
                   under it trades muscle for scale movement. To lose faster, raise activity — not cut food.
                 </div>
               )}
               {!p.reached && (
-                <div className="rounded-xl px-4 py-3 mb-2 text-xs leading-relaxed" style={{ background: C.turmericSoft, border: "1px solid #E8D9AE", color: "#7A5A06" }}>
+                <div className="rounded-xl px-4 py-3 mb-2 text-xs leading-relaxed" style={{ background: C.turmericSoft, border: `1px solid ${C.turmericBorder}`, color: C.carbFg }}>
                   <span className="font-semibold">Target may not be reachable at this intake.</span> As weight drops, burn
                   drops too, and it meets your intake before {p.targetKg} kg. Either accept a higher realistic end weight
                   or raise the activity level so you keep burning more.
@@ -1727,6 +1832,8 @@ export default function DietPlan() {
           clear fasting with a doctor first.
         </p>
       </div>
+
+      <BottomNav tabs={TABS} tab={tab} setTab={setTab} accent={p.accent} />
     </div>
   );
 }

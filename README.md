@@ -8,6 +8,9 @@ safe rate (never below BMR / clinical floor).
 Data (weight logs, custom foods, edited rotation, both people's settings) is
 stored on-device and works offline.
 
+Dark mode follows your phone's setting automatically, with a sun/moon toggle in
+the top corner to override it.
+
 ## Run locally first
 
 ```bash

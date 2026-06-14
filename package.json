@@ -13,6 +13,8 @@
     "apk": "npm run build && cap sync && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
+    "@fontsource-variable/fraunces": "^5.2.9",
+    "@fontsource-variable/inter": "^5.2.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -20,11 +22,11 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.41",
+    "tailwindcss": "^3.4.10",
     "typescript": "^5.5.3",
     "vite": "^5.4.0",
-    "vite-plugin-pwa": "^0.20.1",
-    "tailwindcss": "^3.4.10",
-    "postcss": "^8.4.41",
-    "autoprefixer": "^10.4.20"
+    "vite-plugin-pwa": "^0.20.1"
   }
 }
