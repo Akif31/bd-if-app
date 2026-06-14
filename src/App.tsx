@@ -92,9 +92,10 @@ interface Body {
   weeks: number; // preferred timeline; gets clamped to a safe rate
 }
 
+// Generic placeholder defaults — users overwrite these on the Setup tab.
 const DEFAULT_BODY: Record<Person, Body> = {
-  m: { startKg: 79, targetKg: 70, heightCm: 172, age: 30, activity: "light", weeks: 18 },
-  f: { startKg: 75, targetKg: 60, heightCm: 160, age: 28, activity: "light", weeks: 38 },
+  m: { startKg: 90, targetKg: 72, heightCm: 180, age: 40, activity: "light", weeks: 40 },
+  f: { startKg: 70, targetKg: 62, heightCm: 160, age: 35, activity: "light", weeks: 40 },
 };
 
 // Absolute calorie floors regardless of math (clinical minimums for unsupervised dieting)
