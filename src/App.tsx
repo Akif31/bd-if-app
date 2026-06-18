@@ -1277,6 +1277,45 @@ function sinceLabel(iso: string | null): string {
   return `${days} days ago`;
 }
 
+// Numeric input that keeps its own draft text while focused so a half-typed
+// value never gets clamped/overwritten mid-keystroke (this was snapping to
+// min/max on Android, where the IME fires onChange per composed character).
+function NumberField({ label, value, min, max, step = 1, onCommit }: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  onCommit: (v: number) => void;
+}) {
+  const [text, setText] = useState(String(value));
+  const focused = useRef(false);
+
+  useEffect(() => {
+    if (!focused.current) setText(String(value));
+  }, [value]);
+
+  return (
+    <div>
+      <label className="text-[10px] uppercase tracking-wide block mb-1" style={{ color: C.faint }}>{label}</label>
+      <input
+        type="number" inputMode="decimal" step={step} value={text}
+        onFocus={() => { focused.current = true; }}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => {
+          focused.current = false;
+          const n = parseFloat(text);
+          const clamped = Math.min(max, Math.max(min, isNaN(n) ? value : n));
+          setText(String(clamped));
+          if (clamped !== value) onCommit(clamped);
+        }}
+        className="w-full text-sm px-3 py-2 rounded-xl outline-none"
+        style={{ border: `1px solid ${C.line}`, background: C.surface, color: C.ink }}
+      />
+    </div>
+  );
+}
+
 function BackupPanel({ profile }: { profile: DerivedProfile }) {
   const p = profile;
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1714,23 +1753,11 @@ export default function DietPlan() {
         {/* ── Setup ── */}
         {tab === "setup" && (() => {
           const b = bodies[person];
-          const num = (v: string, fallback: number) => {
-            const n = parseFloat(v);
-            return isNaN(n) ? fallback : n;
-          };
           const field = (label: string, key: keyof Body, value: number, min: number, max: number, step = 1) => (
-            <div>
-              <label className="text-[10px] uppercase tracking-wide block mb-1" style={{ color: C.faint }}>{label}</label>
-              <input
-                type="number" inputMode="decimal" step={step} value={value}
-                onChange={(e) => {
-                  const v = Math.min(max, Math.max(min, num(e.target.value, value)));
-                  saveBody(person, { ...b, [key]: v });
-                }}
-                className="w-full text-sm px-3 py-2 rounded-xl outline-none"
-                style={{ border: `1px solid ${C.line}`, background: C.surface, color: C.ink }}
-              />
-            </div>
+            <NumberField
+              label={label} value={value} min={min} max={max} step={step}
+              onCommit={(v) => saveBody(person, { ...b, [key]: v })}
+            />
           );
           return (
             <div>
